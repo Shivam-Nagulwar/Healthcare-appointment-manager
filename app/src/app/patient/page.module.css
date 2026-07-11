@@ -1,0 +1,353 @@
+/* Patient Dashboard Page Styles */
+
+.statsRow {
+  margin-bottom: var(--space-8);
+}
+
+/* Main Grid */
+.mainGrid {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: var(--space-8);
+}
+
+@media (max-width: 1100px) {
+  .mainGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.leftColumn {
+  min-width: 0;
+}
+
+.rightColumn {
+  min-width: 0;
+}
+
+/* Section Headers */
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.sectionTitle {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Card Title */
+.cardTitle {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-4);
+}
+
+/* Appointment Cards */
+.appointmentsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.appointmentCard {
+  padding: var(--space-5) !important;
+}
+
+.urgentBorder {
+  border-left: 3px solid var(--danger-500) !important;
+}
+
+.appointmentHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.appointmentDoctor {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.appointmentDoctorName {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.appointmentSpec {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.appointmentStatus {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.appointmentDetails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-lg);
+}
+
+.appointmentDetailItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.chiefComplaint {
+  font-style: italic;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* AI Preview */
+.aiPreview {
+  background: var(--primary-50);
+  border: 1px solid var(--primary-100);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+:global([data-theme="dark"]) .aiPreview {
+  background: rgba(8, 145, 178, 0.08);
+  border-color: rgba(8, 145, 178, 0.2);
+}
+
+.aiPreviewHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--primary-700);
+  margin-bottom: var(--space-2);
+}
+
+:global([data-theme="dark"]) .aiPreviewHeader {
+  color: var(--primary-400);
+}
+
+.suggestedQuestions {
+  padding-left: var(--space-2);
+}
+
+.sqLabel {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-1);
+}
+
+.suggestedQuestions ul {
+  list-style: none;
+  padding: 0;
+}
+
+.suggestedQuestions li {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  padding: 2px 0;
+  padding-left: var(--space-3);
+  position: relative;
+}
+
+.suggestedQuestions li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--primary-400);
+}
+
+/* Appointment Actions */
+.appointmentActions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+/* Quick Actions */
+.quickActions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+@media (max-width: 768px) {
+  .quickActions {
+    grid-template-columns: 1fr;
+  }
+}
+
+.quickActionCard {
+  padding: var(--space-5) !important;
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+}
+
+.quickActionCard h3 {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.quickActionCard p {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.quickActionIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--space-3);
+}
+
+:global([data-theme="dark"]) .quickActionIcon {
+  opacity: 0.9;
+}
+
+/* Activity List */
+.activityList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.activityItem {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.activityDot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--primary-500);
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.activityContent {
+  flex: 1;
+}
+
+.activityText {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.activityTime {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+/* Doctors List */
+.doctorsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.doctorMini {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  transition: background var(--transition-fast);
+  text-decoration: none;
+  color: inherit;
+}
+
+.doctorMini:hover {
+  background: var(--bg-tertiary);
+}
+
+.doctorMiniInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.doctorMiniName {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doctorMiniSpec {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.doctorMiniRating {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* Health Tip */
+.healthTip {
+  background: linear-gradient(135deg, var(--primary-50), var(--accent-50));
+  border: 1px solid var(--primary-100);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+}
+
+:global([data-theme="dark"]) .healthTip {
+  background: linear-gradient(135deg, rgba(8, 145, 178, 0.08), rgba(245, 158, 11, 0.08));
+  border-color: rgba(8, 145, 178, 0.2);
+}
+
+.healthTipIcon {
+  font-size: 1.5rem;
+  margin-bottom: var(--space-2);
+}
+
+.healthTip h4 {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.healthTip p {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+}
