@@ -51,6 +51,7 @@ export interface Appointment {
   patientAvatar?: string;
   slotStart: string;
   slotEnd: string;
+  createdAt: string; // added to fix TS error
   status: AppointmentStatus;
   preVisitSummary?: PreVisitSummary;
   postVisitNote?: PostVisitNote;
@@ -59,17 +60,26 @@ export interface Appointment {
 export interface PreVisitSummary {
   id: string;
   rawSymptoms: string;
+  rawInput?: string; // alias for rawSymptoms used in detail page
   urgencyLevel: UrgencyLevel | null;
   chiefComplaint: string | null;
   suggestedQuestions: string[] | null;
+  differentialDiagnosis?: string[];
+  redFlags?: string[];
+  patientFriendlySummary?: string;
   llmStatus: 'OK' | 'FAILED';
 }
 
 export interface PostVisitNote {
   id: string;
   clinicalNotes: string;
+  doctorNotesRaw?: string; // alias used in detail page
   prescription: PrescriptionItem[];
+  prescriptions?: PrescriptionItem[]; // alias used in detail page
   patientSummary: string | null;
+  patientFriendlySummary?: string | null; // alias used in detail page
+  followUpRecommended?: boolean;
+  followUpDays?: number;
   llmStatus: 'OK' | 'FAILED';
 }
 
@@ -78,6 +88,7 @@ export interface PrescriptionItem {
   dosage: string;
   frequency: string;
   durationDays: number;
+  duration?: string; // alias used in detail page
 }
 
 export interface TimeSlot {
@@ -280,6 +291,7 @@ export const mockAppointments: Appointment[] = [
     slotStart: formatDate(tomorrow, 10, 0),
     slotEnd: formatDate(tomorrow, 10, 30),
     status: 'BOOKED',
+    createdAt: new Date().toISOString(),
     preVisitSummary: {
       id: 'pvs-1',
       rawSymptoms: 'Experiencing chest pain during exercise, shortness of breath, and occasional dizziness for the past 2 weeks.',
@@ -303,6 +315,7 @@ export const mockAppointments: Appointment[] = [
     slotStart: formatDate(dayAfter, 14, 0),
     slotEnd: formatDate(dayAfter, 14, 20),
     status: 'BOOKED',
+    createdAt: new Date().toISOString(),
     preVisitSummary: {
       id: 'pvs-2',
       rawSymptoms: 'Persistent rash on forearms for 3 weeks, itchy and red. Over-the-counter creams have not helped.',
@@ -326,6 +339,7 @@ export const mockAppointments: Appointment[] = [
     slotStart: formatDate(lastWeek, 11, 0),
     slotEnd: formatDate(lastWeek, 11, 15),
     status: 'COMPLETED',
+    createdAt: new Date().toISOString(),
     preVisitSummary: {
       id: 'pvs-3',
       rawSymptoms: 'Recurring headaches, fatigue, and mild fever for the past week. Difficulty sleeping.',
@@ -359,6 +373,7 @@ export const mockAppointments: Appointment[] = [
     slotStart: formatDate(tomorrow, 11, 0),
     slotEnd: formatDate(tomorrow, 11, 30),
     status: 'BOOKED',
+    createdAt: new Date().toISOString(),
     preVisitSummary: {
       id: 'pvs-4',
       rawSymptoms: 'Severe knee pain after a fall during sports. Swelling and difficulty walking. Pain intensifies when climbing stairs.',
@@ -382,6 +397,7 @@ export const mockAppointments: Appointment[] = [
     slotStart: formatDate(tomorrow, 15, 0),
     slotEnd: formatDate(tomorrow, 15, 20),
     status: 'BOOKED',
+    createdAt: new Date().toISOString(),
   },
   {
     id: 'apt-6',
@@ -393,6 +409,7 @@ export const mockAppointments: Appointment[] = [
     slotStart: formatDate(today, 9, 0),
     slotEnd: formatDate(today, 9, 30),
     status: 'COMPLETED',
+    createdAt: new Date().toISOString(),
     postVisitNote: {
       id: 'pvn-2',
       clinicalNotes: 'Follow-up for hypertension management. BP well-controlled at 128/82. ECG normal. Continue current medications.',
@@ -414,6 +431,7 @@ export const mockAppointments: Appointment[] = [
     slotStart: formatDate(lastWeek, 14, 0),
     slotEnd: formatDate(lastWeek, 14, 45),
     status: 'CANCELLED',
+    createdAt: new Date().toISOString(),
   },
 ];
 
@@ -474,3 +492,4 @@ export const specializations = [
   'Ophthalmologist',
   'Psychiatrist',
 ];
+
