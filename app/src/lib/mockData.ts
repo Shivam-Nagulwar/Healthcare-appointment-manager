@@ -105,6 +105,69 @@ export interface DoctorLeave {
 }
 
 // ========================================
+// Mock Notifications
+// ========================================
+
+export type NotificationType = 'REMINDER' | 'PRESCRIPTION' | 'SYSTEM' | 'NEW_APPOINTMENT';
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+  link?: string;
+}
+
+export const mockNotifications: AppNotification[] = [
+  // Patient Notifications
+  {
+    id: 'notif-1',
+    userId: 'usr-patient-1',
+    type: 'REMINDER',
+    title: 'Upcoming Appointment',
+    message: 'You have an appointment with Dr. Arun Patel tomorrow at 10:00 AM.',
+    timestamp: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+    read: false,
+    link: '/patient/appointments/apt-1'
+  },
+  {
+    id: 'notif-2',
+    userId: 'usr-patient-1',
+    type: 'PRESCRIPTION',
+    title: 'New Prescription Added',
+    message: 'Dr. Priya Sharma has added a new prescription to your records.',
+    timestamp: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 days ago
+    read: true,
+    link: '/patient/prescriptions'
+  },
+  
+  // Doctor Notifications
+  {
+    id: 'notif-3',
+    userId: 'usr-doctor-1',
+    type: 'NEW_APPOINTMENT',
+    title: 'New Booking',
+    message: 'Sarah Johnson has booked an appointment for tomorrow at 10:00 AM.',
+    timestamp: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
+    read: false,
+    link: '/doctor/appointments/apt-1'
+  },
+  {
+    id: 'notif-4',
+    userId: 'usr-doctor-1',
+    type: 'SYSTEM',
+    title: 'AI Summary Ready',
+    message: 'An AI pre-visit summary is ready for your appointment with Sunita Rao.',
+    timestamp: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+    read: true,
+    link: '/doctor/appointments/apt-6'
+  }
+];
+
+// ========================================
 // Mock Users
 // ========================================
 
