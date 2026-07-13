@@ -238,7 +238,8 @@ export default function AdminDashboard() {
                       <div className={styles.leaveInfo}>
                         <span className={styles.leaveName}>{leave.doctorName}</span>
                         <span className={styles.leaveDate}>
-                          {new Date(leave.leaveDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {new Date(leave.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          {leave.startDate !== leave.endDate && ` - ${new Date(leave.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
                         </span>
                       </div>
                       <span className="badge badge-warning">{leave.reason || 'Personal'}</span>

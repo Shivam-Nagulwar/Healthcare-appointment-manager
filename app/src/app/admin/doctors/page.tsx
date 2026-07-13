@@ -30,6 +30,8 @@ export default function AdminDoctorsPage() {
     experience: 0,
     slotDurationMin: 30,
     location: '',
+    education: '',
+    bio: '',
   });
 
   const filteredDoctors = useMemo(() => {
@@ -50,6 +52,8 @@ export default function AdminDoctorsPage() {
       experience: 0,
       slotDurationMin: 30,
       location: '',
+      education: '',
+      bio: '',
     });
     setIsModalOpen(true);
   };
@@ -60,9 +64,11 @@ export default function AdminDoctorsPage() {
       name: doctor.name,
       email: doctor.email,
       specialization: doctor.specialization,
-      experience: doctor.experience,
-      slotDurationMin: doctor.slotDurationMin,
+      experience: doctor.experience || 0,
+      slotDurationMin: doctor.slotDurationMin || 30,
       location: doctor.location || '',
+      education: doctor.education || '',
+      bio: doctor.bio || '',
     });
     setIsModalOpen(true);
   };
@@ -84,8 +90,6 @@ export default function AdminDoctorsPage() {
         ...formData,
         rating: 0,
         totalReviews: 0,
-        bio: '',
-        education: '',
         workingHours: {
           mon: ['09:00', '17:00'],
           tue: ['09:00', '17:00'],
@@ -259,20 +263,40 @@ export default function AdminDoctorsPage() {
                 </div>
               </div>
               <div className="form-group">
-                <label className="form-label">Location (Clinic / Room)</label>
+                <label className="form-label">Location (Clinic / Hospital)</label>
                 <input 
                   type="text" 
                   className="form-input" 
-                  required 
                   value={formData.location}
                   onChange={e => setFormData({...formData, location: e.target.value})}
+                  placeholder="e.g., City Hospital, NY"
                 />
               </div>
-              
-              <div className={styles.modalFooter}>
+              <div className="form-group">
+                <label className="form-label">Education & Qualifications</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  value={formData.education}
+                  onChange={e => setFormData({...formData, education: e.target.value})}
+                  placeholder="e.g., MBBS, MD (Cardiology)"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Professional Bio</label>
+                <textarea 
+                  className="form-input" 
+                  rows={3}
+                  value={formData.bio}
+                  onChange={e => setFormData({...formData, bio: e.target.value})}
+                  placeholder="Brief description of the doctor's background and expertise..."
+                />
+              </div>
+
+              <div className={styles.modalActions}>
                 <button type="button" className="btn btn-ghost" onClick={() => setIsModalOpen(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary">
-                  <CheckIcon size={16} /> Save Doctor
+                  {editingDoctor ? 'Save Changes' : 'Create Doctor'}
                 </button>
               </div>
             </form>

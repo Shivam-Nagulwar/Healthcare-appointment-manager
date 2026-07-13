@@ -100,7 +100,8 @@ export interface DoctorLeave {
   id: string;
   doctorId: string;
   doctorName: string;
-  leaveDate: string;
+  startDate: string;
+  endDate: string;
   reason: string | null;
 }
 
@@ -604,14 +605,16 @@ export const mockDoctorLeaves: DoctorLeave[] = [
     id: 'leave-1',
     doctorId: 'doc-1',
     doctorName: 'Dr. Arun Patel',
-    leaveDate: formatDate(dayAfter, 0, 0).split('T')[0],
+    startDate: formatDate(dayAfter, 0, 0).split('T')[0],
+    endDate: formatDate(dayAfter, 0, 0).split('T')[0],
     reason: 'Medical conference',
   },
   {
     id: 'leave-2',
     doctorId: 'doc-3',
     doctorName: 'Dr. Rahul Mehta',
-    leaveDate: formatDate(new Date(today.getTime() + 7 * 86400000), 0, 0).split('T')[0],
+    startDate: formatDate(new Date(today.getTime() + 7 * 86400000), 0, 0).split('T')[0],
+    endDate: formatDate(new Date(today.getTime() + 9 * 86400000), 0, 0).split('T')[0],
     reason: 'Personal leave',
   },
 ];

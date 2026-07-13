@@ -20,7 +20,8 @@ export default function AdminLeavesPage() {
   // Form State
   const [formData, setFormData] = useState({
     doctorId: '',
-    leaveDate: '',
+    startDate: '',
+    endDate: '',
     reason: '',
   });
 
@@ -37,13 +38,14 @@ export default function AdminLeavesPage() {
 
     const newLeave = {
       id: `leave-${Date.now()}`,
-      doctorId: doctor.id,
+      doctorId: formData.doctorId,
       doctorName: doctor.name,
-      leaveDate: formData.leaveDate,
-      reason: formData.reason,
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      reason: formData.reason || null,
     };
     
-    setLeaves([newLeave, ...leaves].sort((a, b) => new Date(a.leaveDate).getTime() - new Date(b.leaveDate).getTime()));
+    setLeaves([newLeave, ...leaves].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()));
     setIsModalOpen(false);
   };
 
@@ -57,7 +59,7 @@ export default function AdminLeavesPage() {
           <div className={styles.actionBar}>
             <h2 className={styles.pageTitle}>Upcoming Leaves</h2>
             <button className="btn btn-primary" onClick={() => {
-              setFormData({ doctorId: mockDoctors[0]?.id || '', leaveDate: '', reason: '' });
+              setFormData({ doctorId: mockDoctors[0]?.id || '', startDate: '', endDate: '', reason: '' });
               setIsModalOpen(true);
             }}>
               <PlusIcon size={16} /> Log Leave
@@ -91,9 +93,12 @@ export default function AdminLeavesPage() {
                         </div>
                       </td>
                       <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                          <CalendarIcon size={14} style={{ color: 'var(--text-tertiary)' }} />
-                          <span>{new Date(leave.leaveDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        <div className={styles.dateCell}>
+                          <CalendarIcon size={16} />
+                          {new Date(leave.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {leave.startDate !== leave.endDate && (
+                            <> - {new Date(leave.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</>
+                          )}
                         </div>
                       </td>
                       <td>{leave.reason || <span style={{ color: 'var(--text-tertiary)' }}>No reason provided</span>}</td>
@@ -141,15 +146,28 @@ export default function AdminLeavesPage() {
                   ))}
                 </select>
               </div>
-              <div className="form-group">
-                <label className="form-label">Leave Date</label>
-                <input 
-                  type="date" 
-                  className="form-input" 
-                  required 
-                  value={formData.leaveDate}
-                  onChange={e => setFormData({...formData, leaveDate: e.target.value})}
-                />
+              <div className={styles.formRow}>
+                <div className="form-group">
+                  <label className="form-label">From Date</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={formData.startDate}
+                    onChange={e => setFormData({...formData, startDate: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">To Date</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={formData.endDate}
+                    onChange={e => setFormData({...formData, endDate: e.target.value})}
+                    required
+                    min={formData.startDate}
+                  />
+                </div>
               </div>
               <div className="form-group">
                 <label className="form-label">Reason (Optional)</label>
