@@ -89,9 +89,9 @@ export default function AdminDashboard() {
                   <Link href="/admin/doctors" className="btn btn-ghost btn-sm">
                     View All <ChevronRightIcon size={14} />
                   </Link>
-                  <button className="btn btn-primary btn-sm">
+                  <Link href="/admin/doctors" className="btn btn-primary btn-sm">
                     <PlusIcon size={14} /> Add Doctor
-                  </button>
+                  </Link>
                 </div>
               </div>
 
@@ -145,15 +145,15 @@ export default function AdminDashboard() {
                           </td>
                           <td>
                             <div style={{ display: 'flex', gap: 'var(--space-1)' }}>
-                              <button className="btn btn-ghost btn-icon btn-sm" title="View">
+                              <Link href="/admin/doctors" className="btn btn-ghost btn-icon btn-sm" title="View">
                                 <EyeIcon size={14} />
-                              </button>
-                              <button className="btn btn-ghost btn-icon btn-sm" title="Edit">
+                              </Link>
+                              <Link href="/admin/doctors" className="btn btn-ghost btn-icon btn-sm" title="Edit">
                                 <EditIcon size={14} />
-                              </button>
-                              <button className="btn btn-ghost btn-icon btn-sm" title="Delete" style={{ color: 'var(--danger-500)' }}>
+                              </Link>
+                              <Link href="/admin/doctors" className="btn btn-ghost btn-icon btn-sm" title="Delete" style={{ color: 'var(--danger-500)' }}>
                                 <TrashIcon size={14} />
-                              </button>
+                              </Link>
                             </div>
                           </td>
                         </tr>

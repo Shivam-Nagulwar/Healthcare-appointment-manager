@@ -77,7 +77,6 @@ function getNavSections(role: Role): NavSection[] {
           items: [
             { label: 'Leave Calendar', href: '/admin/leaves', icon: <CalendarIcon /> },
             { label: 'Analytics', href: '/admin/analytics', icon: <BarChartIcon /> },
-            { label: 'Security', href: '/admin/security', icon: <ShieldIcon /> },
           ],
         },
       ];
