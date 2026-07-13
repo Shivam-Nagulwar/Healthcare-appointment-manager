@@ -30,7 +30,7 @@ export default function LandingPage() {
             <button onClick={toggleTheme} className={styles.themeBtn}>
               {theme === 'light' ? <MoonIcon size={18} /> : <SunIcon size={18} />}
             </button>
-            <Link href="/patient" className="btn btn-primary">
+            <Link href="/login" className="btn btn-primary">
               Get Started <ChevronRightIcon size={14} />
             </Link>
           </nav>
@@ -54,12 +54,12 @@ export default function LandingPage() {
             insights, and stay on top of your health — all in one beautiful platform.
           </p>
           <div className={styles.heroCtas}>
-            <Link href="/patient" className="btn btn-primary btn-lg">
+            <Link href="/register" className="btn btn-primary btn-lg">
               <CalendarIcon size={18} />
               Book an Appointment
             </Link>
-            <Link href="/doctor" className="btn btn-secondary btn-lg">
-              Doctor Portal
+            <Link href="/login" className="btn btn-secondary btn-lg">
+              Login to Portals
             </Link>
           </div>
           <div className={styles.heroStats}>

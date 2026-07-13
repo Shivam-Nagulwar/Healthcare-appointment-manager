@@ -198,3 +198,12 @@ export const ShieldIcon = (props: IconProps) => (
 export const BarChartIcon = (props: IconProps) => (
   <Icon {...props}><line x1="12" y1="20" x2="12" y2="10" /><line x1="18" y1="20" x2="18" y2="4" /><line x1="6" y1="20" x2="6" y2="16" /></Icon>
 );
+
+export const ArrowRightIcon = (props: IconProps) => (
+  <Icon {...props}><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></Icon>
+);
+
+export const LockIcon = (props: IconProps) => (
+  <Icon {...props}><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></Icon>
+);
+
