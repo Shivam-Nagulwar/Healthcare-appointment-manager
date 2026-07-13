@@ -295,8 +295,11 @@ export const mockAppointments: Appointment[] = [
     preVisitSummary: {
       id: 'pvs-1',
       rawSymptoms: 'Experiencing chest pain during exercise, shortness of breath, and occasional dizziness for the past 2 weeks.',
+      rawInput: 'Experiencing chest pain during exercise, shortness of breath, and occasional dizziness for the past 2 weeks.',
       urgencyLevel: 'MEDIUM',
       chiefComplaint: 'Exercise-induced chest pain with associated dyspnea',
+      differentialDiagnosis: ['Stable angina', 'Exercise-induced asthma', 'Musculoskeletal chest pain', 'GERD-related chest discomfort'],
+      redFlags: ['Chest pain during exertion', 'Associated shortness of breath'],
       suggestedQuestions: [
         'When did you first notice the chest pain during exercise?',
         'Do you have a family history of heart disease?',
@@ -343,8 +346,10 @@ export const mockAppointments: Appointment[] = [
     preVisitSummary: {
       id: 'pvs-3',
       rawSymptoms: 'Recurring headaches, fatigue, and mild fever for the past week. Difficulty sleeping.',
+      rawInput: 'Recurring headaches, fatigue, and mild fever for the past week. Difficulty sleeping.',
       urgencyLevel: 'LOW',
       chiefComplaint: 'Recurrent tension headaches with fatigue',
+      differentialDiagnosis: ['Tension-type headache', 'Sleep deprivation syndrome', 'Viral upper respiratory infection', 'Stress-related fatigue'],
       suggestedQuestions: [
         'How would you rate the intensity of your headaches on a scale of 1-10?',
         'Have you been under more stress than usual?',
@@ -377,8 +382,11 @@ export const mockAppointments: Appointment[] = [
     preVisitSummary: {
       id: 'pvs-4',
       rawSymptoms: 'Severe knee pain after a fall during sports. Swelling and difficulty walking. Pain intensifies when climbing stairs.',
+      rawInput: 'Severe knee pain after a fall during sports. Swelling and difficulty walking. Pain intensifies when climbing stairs.',
       urgencyLevel: 'HIGH',
       chiefComplaint: 'Acute knee injury with swelling post-trauma',
+      differentialDiagnosis: ['ACL tear', 'Meniscus tear', 'Patellar fracture', 'Ligament sprain'],
+      redFlags: ['Acute trauma with significant swelling', 'Inability to bear weight', 'Possible ligament rupture'],
       suggestedQuestions: [
         'Can you describe exactly how the injury occurred?',
         'Have you had any previous knee injuries?',

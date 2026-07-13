@@ -109,10 +109,7 @@ export default function DoctorAppointmentsPage() {
               </div>
             ) : (
               filtered.map((apt, idx) => {
-                // Link depends on status: if completed, view notes. if booked, maybe view pre-visit summary or add notes
-                const targetUrl = apt.status === 'COMPLETED' 
-                  ? `/doctor/appointments/${apt.id}/notes` 
-                  : `/doctor/appointments/${apt.id}/notes`; // For simplicity, both go to notes page for now
+                const targetUrl = `/doctor/appointments/${apt.id}`;
 
                 return (
                   <Link

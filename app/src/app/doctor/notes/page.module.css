@@ -1,0 +1,229 @@
+/* Doctor Notes Page Styles */
+
+/* Summary Stats */
+.summaryRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-5);
+  margin-bottom: var(--space-8);
+}
+
+.summaryCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.summaryCard > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.summaryValue {
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+  margin-bottom: var(--space-1);
+}
+
+.summaryLabel {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Controls */
+.controlsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-6);
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.tabBar {
+  display: flex;
+  background: var(--bg-tertiary);
+  padding: 4px;
+  border-radius: var(--radius-lg);
+  gap: 2px;
+}
+
+.tab {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.tab:hover {
+  color: var(--text-primary);
+}
+
+.tabActive {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-card);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-xl);
+  min-width: 300px;
+  color: var(--text-tertiary);
+  transition: all var(--transition-fast);
+}
+
+.searchBar:focus-within {
+  border-color: var(--primary-400);
+  box-shadow: var(--shadow-glow);
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.searchInput::placeholder { color: var(--text-tertiary); }
+
+/* Notes List */
+.notesList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.noteRow {
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  gap: var(--space-6);
+}
+
+.noteRow:hover {
+  border-color: var(--primary-300);
+  transform: translateX(4px);
+  box-shadow: var(--shadow-md);
+}
+
+.noteLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 250px;
+}
+
+.noteIndicator {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.noteComplete {
+  background: var(--success-50);
+  color: var(--success-600);
+}
+
+.notePending {
+  background: var(--warning-50);
+  color: var(--warning-600);
+}
+
+[data-theme="dark"] .noteComplete {
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--success-400);
+}
+
+[data-theme="dark"] .notePending {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning-400);
+}
+
+.noteInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notePatient {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.noteMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.noteMeta span {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.noteRight {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  justify-content: flex-end;
+}
+
+.notePreview {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.noteTags {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+@media (max-width: 860px) {
+  .summaryRow { grid-template-columns: 1fr; gap: var(--space-3); }
+  .noteRow { flex-direction: column; align-items: flex-start; gap: var(--space-4); }
+  .noteRight { width: 100%; justify-content: space-between; }
+  .notePreview { display: none; }
+}
