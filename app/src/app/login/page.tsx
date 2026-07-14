@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 import { StethoscopeIcon, ArrowRightIcon, MailIcon, LockIcon } from '@/components/Icons';
+import { mockLogin } from '@/actions/auth';
 import styles from './page.module.css';
 
 export default function LoginPage() {
@@ -12,13 +13,17 @@ export default function LoginPage() {
   const [role, setRole] = useState<'PATIENT' | 'DOCTOR' | 'ADMIN'>('PATIENT');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate authentication and route based on role
-    if (role === 'PATIENT') router.push('/patient');
-    if (role === 'DOCTOR') router.push('/doctor');
-    if (role === 'ADMIN') router.push('/admin');
+    setIsLoading(true);
+    try {
+      await mockLogin(role);
+    } catch (error) {
+      console.error(error);
+      setIsLoading(false);
+    }
   };
 
   return (

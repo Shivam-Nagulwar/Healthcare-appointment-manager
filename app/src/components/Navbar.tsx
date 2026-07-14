@@ -4,8 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BellIcon, MenuIcon, SearchIcon, CheckIcon } from './Icons';
-import { mockNotifications, mockCurrentUser, mockDoctorUser, mockAdminUser } from '@/lib/mockData';
-import type { AppNotification } from '@/lib/mockData';
+import { getMyNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '@/actions/notifications';
+import type { Notification } from '@prisma/client';
 
 interface NavbarProps {
   title: string;
@@ -13,7 +13,7 @@ interface NavbarProps {
   onMenuToggle?: () => void;
 }
 
-function timeAgo(dateString: string) {
+function timeAgo(dateString: Date) {
   const date = new Date(dateString);
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
@@ -27,20 +27,16 @@ function timeAgo(dateString: string) {
 export default function Navbar({ title, subtitle, onMenuToggle }: NavbarProps) {
   const [showSearch, setShowSearch] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const notifRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
 
   useEffect(() => {
-    // Determine user based on route for demo purposes
-    let userId = '';
-    if (pathname.startsWith('/patient')) userId = mockCurrentUser.id;
-    else if (pathname.startsWith('/doctor')) userId = mockDoctorUser.id;
-    else if (pathname.startsWith('/admin')) userId = mockAdminUser.id;
-
-    if (userId) {
-      setNotifications(mockNotifications.filter(n => n.userId === userId));
+    async function loadNotifications() {
+      const data = await getMyNotifications();
+      setNotifications(data);
     }
+    loadNotifications();
   }, [pathname]);
 
   useEffect(() => {
@@ -56,11 +52,13 @@ export default function Navbar({ title, subtitle, onMenuToggle }: NavbarProps) {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAllRead = () => {
+  const markAllRead = async () => {
+    await markAllNotificationsAsRead();
     setNotifications(notifications.map(n => ({ ...n, read: true })));
   };
 
-  const markAsRead = (id: string) => {
+  const markAsRead = async (id: string) => {
+    await markNotificationAsRead(id);
     setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
   };
 
@@ -140,7 +138,7 @@ export default function Navbar({ title, subtitle, onMenuToggle }: NavbarProps) {
                       <div className="notification-content">
                         <h4>{notif.title}</h4>
                         <p>{notif.message}</p>
-                        <span className="notification-time">{timeAgo(notif.timestamp)}</span>
+                        <span className="notification-time">{timeAgo(notif.createdAt)}</span>
                       </div>
                       {notif.link && (
                         <Link href={notif.link} className="notification-link" onClick={() => setShowNotifications(false)}>
