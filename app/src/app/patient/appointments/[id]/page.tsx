@@ -1,6 +1,5 @@
-'use client';
-
-import { useParams, useRouter } from 'next/navigation';
+import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import {
@@ -9,18 +8,23 @@ import {
   BriefcaseIcon, FileTextIcon, CheckIcon, HeartIcon,
   ActivityIcon,
 } from '@/components/Icons';
-import { mockCurrentUser, mockAppointments, mockDoctors } from '@/lib/mockData';
+import { requireAuth } from '@/lib/session';
+import { Role } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import styles from './page.module.css';
+import RetryAIButton from '@/components/RetryAIButton';
+import RetryPostVisitAIButton from '@/components/RetryPostVisitAIButton';
+import CancelAppointmentButton from '@/components/CancelAppointmentButton';
 
 function getInitials(name: string) {
   return name.split(' ').filter(n => n).map(n => n[0]).join('').slice(0, 2).toUpperCase();
 }
 
-function formatTime(iso: string) {
+function formatTime(iso: string | Date) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
-function formatDate(iso: string) {
+function formatDate(iso: string | Date) {
   return new Date(iso).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 }
 
@@ -43,18 +47,23 @@ function getUrgencyConfig(level: string) {
   return map[level] || { className: 'badge-neutral', color: 'var(--slate-400)', label: level, desc: '' };
 }
 
-export default function AppointmentDetailPage() {
-  const params = useParams();
-  const router = useRouter();
-  const appointmentId = params.id as string;
+export default async function AppointmentDetailPage({ params }: { params: { id: string } }) {
+  const user = await requireAuth(Role.PATIENT);
+  const { id: appointmentId } = await params;
 
-  const appointment = mockAppointments.find(a => a.id === appointmentId);
-  const doctor = appointment ? mockDoctors.find(d => d.name === appointment.doctorName) : null;
+  const appointment = await prisma.appointment.findUnique({
+    where: { id: appointmentId, patient: { userId: user.id } },
+    include: {
+      doctor: { include: { user: true } },
+      preVisitSummary: true,
+      postVisitNote: { include: { prescriptions: true } },
+    },
+  });
 
   if (!appointment) {
     return (
       <div className="dashboard-layout">
-        <Sidebar role="PATIENT" userName={mockCurrentUser.name} userEmail={mockCurrentUser.email} />
+        <Sidebar role="PATIENT" userName={user.name} userEmail={user.email} />
         <div className="main-content">
           <Navbar title="Appointment Details" />
           <main className="page-content">
@@ -62,9 +71,9 @@ export default function AppointmentDetailPage() {
               <div className="empty-state-icon">🔍</div>
               <h3 className="empty-state-title">Appointment not found</h3>
               <p className="empty-state-text">This appointment doesn&apos;t exist or has been removed.</p>
-              <button className="btn btn-primary" onClick={() => router.push('/patient/appointments')}>
+              <Link href="/patient/appointments" className="btn btn-primary">
                 Back to Appointments
-              </button>
+              </Link>
             </div>
           </main>
         </div>
@@ -72,24 +81,25 @@ export default function AppointmentDetailPage() {
     );
   }
 
+  const doctor = appointment.doctor;
   const status = getStatusConfig(appointment.status);
   const preVisit = appointment.preVisitSummary;
   const postVisit = appointment.postVisitNote;
 
   return (
     <div className="dashboard-layout">
-      <Sidebar role="PATIENT" userName={mockCurrentUser.name} userEmail={mockCurrentUser.email} />
+      <Sidebar role="PATIENT" userName={user.name} userEmail={user.email} />
       <div className="main-content">
         <Navbar title="Appointment Details" />
         <main className="page-content">
           {/* Back Button */}
-          <button
+          <Link
+            href="/patient/appointments"
             className="btn btn-ghost"
-            onClick={() => router.push('/patient/appointments')}
-            style={{ marginBottom: 'var(--space-4)' }}
+            style={{ marginBottom: 'var(--space-4)', display: 'inline-flex' }}
           >
             <ChevronLeftIcon size={16} /> Back to Appointments
-          </button>
+          </Link>
 
           <div className={styles.detailLayout}>
             {/* Main Content */}
@@ -99,11 +109,11 @@ export default function AppointmentDetailPage() {
                 <div className={styles.headerTop}>
                   <div className={styles.headerDoctor}>
                     <div className="avatar avatar-lg avatar-primary">
-                      {getInitials(appointment.doctorName)}
+                      {getInitials(doctor.user.name)}
                     </div>
                     <div>
-                      <h2 className={styles.doctorName}>{appointment.doctorName}</h2>
-                      <p className={styles.doctorSpec}>{appointment.doctorSpecialization}</p>
+                      <h2 className={styles.doctorName}>{doctor.user.name}</h2>
+                      <p className={styles.doctorSpec}>{doctor.specialization}</p>
                       {doctor && (
                         <div className={styles.doctorRating}>
                           <StarFilledIcon size={14} style={{ color: 'var(--accent-500)' }} />
@@ -158,12 +168,37 @@ export default function AppointmentDetailPage() {
                 {appointment.status === 'BOOKED' && (
                   <div className={styles.actionBar}>
                     <button className="btn btn-secondary">Reschedule</button>
-                    <button className="btn btn-ghost" style={{ color: 'var(--danger-500)' }}>Cancel Appointment</button>
+                    <CancelAppointmentButton appointmentId={appointment.id} />
                   </div>
                 )}
               </div>
 
               {/* AI Pre-Visit Summary */}
+              {preVisit && preVisit.llmStatus === 'FAILED' && (
+                <div className={`card ${styles.aiCard} animate-fade-in-up`} style={{ borderLeft: '4px solid var(--danger-500)' }}>
+                  <div className={styles.aiHeader}>
+                    <div className={styles.aiTitleRow}>
+                      <AlertTriangleIcon size={22} style={{ color: 'var(--danger-500)' }} />
+                      <h3 style={{ color: 'var(--danger-700)' }}>AI Generation Failed</h3>
+                    </div>
+                  </div>
+                  <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
+                    We couldn&apos;t generate your clinical pre-visit summary. Your original symptoms were saved securely.
+                  </p>
+                  
+                  <div className={styles.aiSection}>
+                    <h4>Your Symptoms</h4>
+                    <p style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', backgroundColor: 'var(--slate-50)', padding: 'var(--space-3)', borderRadius: 'var(--radius-sm)' }}>
+                      {preVisit.rawSymptoms}
+                    </p>
+                  </div>
+
+                  <div style={{ marginTop: 'var(--space-4)' }}>
+                    <RetryAIButton appointmentId={appointment.id} />
+                  </div>
+                </div>
+              )}
+
               {preVisit && preVisit.llmStatus === 'OK' && (
                 <div className={`card ${styles.aiCard} animate-fade-in-up`}>
                   <div className={styles.aiHeader}>
@@ -194,14 +229,14 @@ export default function AppointmentDetailPage() {
                   )}
 
                   {/* Differential Diagnosis */}
-                  {preVisit.differentialDiagnosis && preVisit.differentialDiagnosis.length > 0 && (
+                  {preVisit.differentialDiagnosis && (preVisit.differentialDiagnosis as string[]).length > 0 && (
                     <div className={styles.aiSection}>
                       <h4>Possible Considerations</h4>
                       <div className={styles.diagnosisList}>
-                        {preVisit.differentialDiagnosis.map((d, i) => (
+                        {(preVisit.differentialDiagnosis as string[]).map((diag, i) => (
                           <div key={i} className={styles.diagnosisItem}>
                             <ActivityIcon size={14} style={{ color: 'var(--primary-500)' }} />
-                            <span>{d}</span>
+                            <span>{diag}</span>
                           </div>
                         ))}
                       </div>
@@ -209,11 +244,11 @@ export default function AppointmentDetailPage() {
                   )}
 
                   {/* Suggested Questions */}
-                  {preVisit.suggestedQuestions && preVisit.suggestedQuestions.length > 0 && (
+                  {preVisit.suggestedQuestions && (preVisit.suggestedQuestions as string[]).length > 0 && (
                     <div className={styles.aiSection}>
                       <h4>Questions to Ask Your Doctor</h4>
                       <ul className={styles.questionList}>
-                        {preVisit.suggestedQuestions.map((q, i) => (
+                        {(preVisit.suggestedQuestions as string[]).map((q, i) => (
                           <li key={i}>
                             <span className={styles.qNumber}>{i + 1}</span>
                             {q}
@@ -224,11 +259,13 @@ export default function AppointmentDetailPage() {
                   )}
 
                   {/* Red Flags */}
-                  {preVisit.redFlags && preVisit.redFlags.length > 0 && (
-                    <div className={styles.aiSection}>
-                      <h4 style={{ color: 'var(--danger-500)' }}>⚠️ Red Flags</h4>
+                  {preVisit.redFlags && (preVisit.redFlags as string[]).length > 0 && (
+                    <div className={styles.aiSection} style={{ marginTop: 'var(--space-4)' }}>
+                      <h4 style={{ color: 'var(--danger-600)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                        <AlertTriangleIcon size={16} /> Urgent Symptoms Reported
+                      </h4>
                       <ul className={styles.redFlagList}>
-                        {preVisit.redFlags.map((flag, i) => (
+                        {(preVisit.redFlags as string[]).map((flag, i) => (
                           <li key={i}>{flag}</li>
                         ))}
                       </ul>
@@ -256,10 +293,10 @@ export default function AppointmentDetailPage() {
                     <h3>Post-Visit Summary</h3>
                   </div>
 
-                  {postVisit.doctorNotesRaw && (
+                  {postVisit.clinicalNotes && (
                     <div className={styles.aiSection}>
                       <h4>Doctor&apos;s Notes</h4>
-                      <p className={styles.doctorNotes}>{postVisit.doctorNotesRaw}</p>
+                      <p className={styles.doctorNotes}>{postVisit.clinicalNotes}</p>
                     </div>
                   )}
 
@@ -272,7 +309,7 @@ export default function AppointmentDetailPage() {
                             <div className={styles.rxIcon}>💊</div>
                             <div className={styles.rxInfo}>
                               <strong>{rx.medication}</strong>
-                              <span>{rx.dosage} — {rx.frequency} for {rx.duration}</span>
+                              <span>{rx.dosage} — {rx.frequency} for {rx.durationDays} days</span>
                             </div>
                           </div>
                         ))}
@@ -287,12 +324,24 @@ export default function AppointmentDetailPage() {
                     </div>
                   )}
 
-                  {postVisit.patientFriendlySummary && (
+                  {postVisit.llmStatus === 'FAILED' && (
+                    <div className={styles.patientSummary} style={{ backgroundColor: 'var(--danger-50)', color: 'var(--danger-700)', border: '1px solid var(--danger-200)', display: 'block' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
+                        <AlertTriangleIcon size={16} style={{ color: 'var(--danger-500)' }} />
+                        <strong style={{ color: 'var(--danger-700)' }}>Summary Generation Failed</strong>
+                      </div>
+                      <p style={{ fontSize: 'var(--text-sm)', marginBottom: 'var(--space-4)' }}>
+                        We couldn&apos;t automatically summarize the doctor&apos;s clinical notes into a patient-friendly format. The original notes are safely stored.
+                      </p>
+                      <RetryPostVisitAIButton appointmentId={appointment.id} />
+                    </div>
+                  )}
+
+                  {postVisit.patientSummary && postVisit.llmStatus === 'OK' && (
                     <div className={styles.patientSummary}>
                       <SparklesIcon size={16} style={{ color: 'var(--success-500)', flexShrink: 0 }} />
                       <div>
-                        <strong>AI Summary for You</strong>
-                        <p>{postVisit.patientFriendlySummary}</p>
+                        <strong>Key Takeaway:</strong> {postVisit.patientSummary}
                       </div>
                     </div>
                   )}
@@ -325,10 +374,10 @@ export default function AppointmentDetailPage() {
               )}
 
               {/* Symptoms Summary */}
-              {preVisit?.rawInput && (
+              {preVisit?.rawSymptoms && (
                 <div className="card" style={{ marginTop: 'var(--space-6)' }}>
                   <h3 className={styles.sideTitle}>Your Reported Symptoms</h3>
-                  <p className={styles.symptomsText}>{preVisit.rawInput}</p>
+                  <p className={styles.symptomsText}>{preVisit.rawSymptoms}</p>
                 </div>
               )}
 

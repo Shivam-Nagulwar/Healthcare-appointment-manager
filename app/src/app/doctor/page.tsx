@@ -1,5 +1,6 @@
-'use client';
-
+import { requireAuth } from '@/lib/session';
+import { Role } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import {
@@ -7,10 +8,9 @@ import {
   SparklesIcon, ActivityIcon, TrendingUpIcon, AlertTriangleIcon,
   FileTextIcon, CheckIcon, EyeIcon,
 } from '@/components/Icons';
-import { mockDoctorUser, mockAppointments } from '@/lib/mockData';
-import type { Appointment } from '@/lib/mockData';
 import Link from 'next/link';
 import styles from './page.module.css';
+import { notFound } from 'next/navigation';
 
 function getStatusBadge(status: string) {
   const map: Record<string, { className: string; label: string }> = {
@@ -35,19 +35,32 @@ function getUrgencyIndicator(level: string | null | undefined) {
   );
 }
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+function formatTime(date: Date) {
+  return new Date(date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
 function getInitials(name: string) {
   return name.split(' ').filter(n => n).map(n => n[0]).join('').slice(0, 2).toUpperCase();
 }
 
-export default function DoctorDashboard() {
-  const user = mockDoctorUser;
+export default async function DoctorDashboard() {
+  const user = await requireAuth(Role.DOCTOR);
   
-  // Filter appointments for this doctor
-  const doctorAppointments = mockAppointments.filter(a => a.doctorName === user.name);
+  const dbDoctor = await prisma.doctorProfile.findFirst({
+    where: { userId: user.id },
+    include: { user: true }
+  });
+
+  if (!dbDoctor) notFound();
+
+  const doctorAppointments = await prisma.appointment.findMany({
+    where: { doctorId: dbDoctor.id },
+    include: {
+      patient: { include: { user: true } },
+      preVisitSummary: true,
+    }
+  });
+
   const today = new Date();
   
   const todayAppointments = doctorAppointments
@@ -146,10 +159,10 @@ export default function DoctorDashboard() {
                         <div className={styles.timelineCardHeader}>
                           <div className={styles.patientInfo}>
                             <div className="avatar avatar-sm avatar-accent">
-                              {getInitials(apt.patientName)}
+                              {getInitials(apt.patient.user.name)}
                             </div>
                             <div>
-                              <span className={styles.patientName}>{apt.patientName}</span>
+                              <span className={styles.patientName}>{apt.patient.user.name}</span>
                               <span className={styles.timeRange}>{formatTime(apt.slotStart)} — {formatTime(apt.slotEnd)}</span>
                             </div>
                           </div>
@@ -205,10 +218,10 @@ export default function DoctorDashboard() {
                     {upcomingAppointments.slice(0, 5).map(apt => (
                       <div key={apt.id} className={styles.upcomingItem}>
                         <div className="avatar avatar-sm avatar-accent">
-                          {getInitials(apt.patientName)}
+                          {getInitials(apt.patient.user.name)}
                         </div>
                         <div className={styles.upcomingInfo}>
-                          <span className={styles.upcomingName}>{apt.patientName}</span>
+                          <span className={styles.upcomingName}>{apt.patient.user.name}</span>
                           <span className={styles.upcomingDate}>
                             {new Date(apt.slotStart).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {formatTime(apt.slotStart)}
                           </span>

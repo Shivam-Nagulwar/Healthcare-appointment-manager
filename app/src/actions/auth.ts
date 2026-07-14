@@ -4,18 +4,30 @@ import { cookies } from 'next/headers';
 import prisma from '@/lib/prisma';
 import { Role } from '@prisma/client';
 import { redirect } from 'next/navigation';
+import * as bcrypt from 'bcryptjs';
 
-export async function mockLogin(role: Role) {
-  // Find the first user in the database with the requested role
-  const user = await prisma.user.findFirst({
-    where: { role },
+export async function login(formData: FormData) {
+  const email = formData.get('email') as string;
+  const password = formData.get('password') as string;
+  const role = formData.get('role') as Role;
+
+  const user = await prisma.user.findUnique({
+    where: { email },
   });
 
   if (!user) {
-    throw new Error(`No mock user found for role: ${role}`);
+    return { error: 'Invalid email or password' };
   }
 
-  // Set a simple cookie to track the session
+  const isMatch = await bcrypt.compare(password, user.passwordHash);
+  if (!isMatch) {
+    return { error: 'Invalid email or password' };
+  }
+
+  if (user.role !== role) {
+    return { error: `Account exists, but is not registered as a ${role.toLowerCase()}.` };
+  }
+
   const cookieStore = await cookies();
   cookieStore.set('auth_session', user.id, {
     httpOnly: true,
@@ -24,18 +36,53 @@ export async function mockLogin(role: Role) {
     path: '/',
   });
 
-  // Redirect to the appropriate portal
-  switch (role) {
-    case Role.PATIENT:
-      redirect('/patient');
-      break;
-    case Role.DOCTOR:
-      redirect('/doctor');
-      break;
-    case Role.ADMIN:
-      redirect('/admin');
-      break;
+  if (user.role === Role.PATIENT) redirect('/patient');
+  if (user.role === Role.DOCTOR) redirect('/doctor');
+  if (user.role === Role.ADMIN) redirect('/admin');
+  redirect('/');
+}
+
+export async function registerUser(formData: FormData) {
+  const name = formData.get('name') as string;
+  const email = formData.get('email') as string;
+  const password = formData.get('password') as string;
+  const role = formData.get('role') as Role;
+
+  if (role !== Role.PATIENT) {
+    return { error: 'Only patients can register publicly. Doctors must be added by an admin.' };
   }
+
+  const existingUser = await prisma.user.findUnique({ where: { email } });
+  if (existingUser) {
+    return { error: 'Email already in use' };
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  const user = await prisma.user.create({
+    data: {
+      name,
+      email,
+      passwordHash: hashedPassword,
+      role,
+      patientProfile: {
+        create: {
+          dob: new Date(),
+          phone: '',
+          bloodGroup: '',
+        }
+      }
+    }
+  });
+  const cookieStore = await cookies();
+  cookieStore.set('auth_session', user.id, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+  });
+
+  redirect('/patient');
 }
 
 export async function logout() {

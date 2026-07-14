@@ -1,24 +1,29 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-
+import { registerUser } from '@/actions/auth';
 import { StethoscopeIcon, ArrowRightIcon, MailIcon, LockIcon, UserIcon } from '@/components/Icons';
-import styles from '../login/page.module.css'; // Re-use the layout styles from Login
+import styles from '../login/page.module.css'; 
 
 export default function RegisterPage() {
-  const router = useRouter();
-  const [role, setRole] = useState<'PATIENT' | 'DOCTOR'>('PATIENT');
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Simulate authentication and route based on role
-    if (role === 'PATIENT') router.push('/patient');
-    if (role === 'DOCTOR') router.push('/doctor');
+    setIsSubmitting(true);
+    setError(null);
+    const formData = new FormData(e.currentTarget);
+    formData.set('role', 'PATIENT');
+
+    const res = await registerUser(formData);
+    
+    // registerUser redirects on success. If it returns, there was an error.
+    if (res?.error) {
+      setError(res.error);
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -48,46 +53,29 @@ export default function RegisterPage() {
 
       {/* Right side: Register Form */}
       <div className={styles.authFormSection}>
-
-
         <div className={styles.formWrapper}>
           <div className={styles.formHeader}>
             <h2>Create an account</h2>
             <p>Enter your details below to get started.</p>
           </div>
 
-          <form onSubmit={handleRegister} className={styles.form}>
-            {/* Role Selection */}
-            <div className={styles.roleSelector}>
-              <p className={styles.roleLabel}>I am signing up as a:</p>
-              <div className={styles.roleTabs}>
-                <button
-                  type="button"
-                  className={`${styles.roleTab} ${role === 'PATIENT' ? styles.activeTab : ''}`}
-                  onClick={() => setRole('PATIENT')}
-                >
-                  Patient
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.roleTab} ${role === 'DOCTOR' ? styles.activeTab : ''}`}
-                  onClick={() => setRole('DOCTOR')}
-                >
-                  Healthcare Provider
-                </button>
+          <form onSubmit={handleSubmit} className={styles.form}>
+            {error && (
+              <div style={{ color: 'var(--danger-500)', fontSize: '14px', marginBottom: '10px' }}>
+                {error}
               </div>
-            </div>
+            )}
+
 
             <div className={styles.inputGroup}>
               <label>Full Name</label>
               <div className={styles.inputWrapper}>
                 <UserIcon size={18} className={styles.inputIcon} />
                 <input
+                  name="name"
                   type="text"
                   placeholder="e.g. John Doe"
                   required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
                 />
               </div>
             </div>
@@ -97,11 +85,10 @@ export default function RegisterPage() {
               <div className={styles.inputWrapper}>
                 <MailIcon size={18} className={styles.inputIcon} />
                 <input
+                  name="email"
                   type="email"
                   placeholder="Enter your email"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
             </div>
@@ -111,17 +98,16 @@ export default function RegisterPage() {
               <div className={styles.inputWrapper}>
                 <LockIcon size={18} className={styles.inputIcon} />
                 <input
+                  name="password"
                   type="password"
                   placeholder="Create a strong password"
                   required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
             </div>
 
-            <button type="submit" className={`btn btn-primary ${styles.submitBtn}`}>
-              Create Account <ArrowRightIcon size={16} />
+            <button type="submit" className={`btn btn-primary ${styles.submitBtn}`} disabled={isSubmitting}>
+              {isSubmitting ? 'Creating Account...' : 'Create Account'} <ArrowRightIcon size={16} />
             </button>
           </form>
 

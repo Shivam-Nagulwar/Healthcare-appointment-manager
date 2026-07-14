@@ -1,27 +1,30 @@
-'use client';
-
-import { useParams, useRouter } from 'next/navigation';
+import { requireAuth } from '@/lib/session';
+import { Role } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import {
   CalendarIcon, ClockIcon, ChevronLeftIcon, SparklesIcon,
-  AlertTriangleIcon, FileTextIcon, CheckIcon, ActivityIcon,
+  AlertTriangleIcon, FileTextIcon, ActivityIcon,
   UserIcon, HeartIcon, EyeIcon,
 } from '@/components/Icons';
-import { mockDoctorUser, mockAppointments, mockDoctors } from '@/lib/mockData';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import styles from './page.module.css';
+import RetryAIButton from '@/components/RetryAIButton';
+import RetryPostVisitAIButton from '@/components/RetryPostVisitAIButton';
+import CancelAppointmentButton from '@/components/CancelAppointmentButton';
 
 function getInitials(name: string) {
   return name.split(' ').filter(n => n).map(n => n[0]).join('').slice(0, 2).toUpperCase();
 }
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+function formatTime(date: Date) {
+  return new Date(date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+function formatDate(date: Date) {
+  return new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 }
 
 function getStatusConfig(status: string) {
@@ -43,17 +46,30 @@ function getUrgencyConfig(level: string) {
   return map[level] || { className: 'badge-neutral', color: 'var(--slate-400)', label: level, bg: 'var(--slate-50)' };
 }
 
-export default function DoctorAppointmentDetailPage() {
-  const params = useParams();
-  const router = useRouter();
-  const appointmentId = params.id as string;
+export default async function DoctorAppointmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const user = await requireAuth(Role.DOCTOR);
+  const resolvedParams = await params;
 
-  const appointment = mockAppointments.find(a => a.id === appointmentId);
+  const dbDoctor = await prisma.doctorProfile.findFirst({
+    where: { userId: user.id },
+  });
+
+  if (!dbDoctor) notFound();
+
+  const appointment = await prisma.appointment.findFirst({
+    where: { id: resolvedParams.id, doctorId: dbDoctor.id },
+    include: {
+      patient: { include: { user: true } },
+      doctor: { include: { user: true } },
+      preVisitSummary: true,
+      postVisitNote: { include: { prescriptions: true } }
+    }
+  });
 
   if (!appointment) {
     return (
       <div className="dashboard-layout">
-        <Sidebar role="DOCTOR" userName={mockDoctorUser.name} userEmail={mockDoctorUser.email} />
+        <Sidebar role="DOCTOR" userName={user.name} userEmail={user.email} />
         <div className="main-content">
           <Navbar title="Appointment Details" />
           <main className="page-content">
@@ -61,9 +77,9 @@ export default function DoctorAppointmentDetailPage() {
               <div className="empty-state-icon">🔍</div>
               <h3 className="empty-state-title">Appointment not found</h3>
               <p className="empty-state-text">The appointment you&apos;re looking for doesn&apos;t exist.</p>
-              <button className="btn btn-primary" onClick={() => router.push('/doctor/appointments')}>
+              <Link href="/doctor/appointments" className="btn btn-primary">
                 Back to Appointments
-              </button>
+              </Link>
             </div>
           </main>
         </div>
@@ -74,20 +90,22 @@ export default function DoctorAppointmentDetailPage() {
   const preVisit = appointment.preVisitSummary;
   const postVisit = appointment.postVisitNote;
   const statusConfig = getStatusConfig(appointment.status);
+  
+  const patientName = appointment.patient.user.name;
 
   return (
     <div className="dashboard-layout">
-      <Sidebar role="DOCTOR" userName={mockDoctorUser.name} userEmail={mockDoctorUser.email} />
+      <Sidebar role="DOCTOR" userName={user.name} userEmail={user.email} />
       <div className="main-content">
-        <Navbar title="Appointment Details" subtitle={`${appointment.patientName} — ${appointment.doctorSpecialization}`} />
+        <Navbar title="Appointment Details" subtitle={`${patientName} — ${appointment.doctor.specialization}`} />
         <main className="page-content">
-          <button
+          <Link
+            href="/doctor/appointments"
             className="btn btn-ghost"
-            onClick={() => router.push('/doctor/appointments')}
-            style={{ marginBottom: 'var(--space-4)' }}
+            style={{ marginBottom: 'var(--space-4)', display: 'inline-flex' }}
           >
             <ChevronLeftIcon size={16} /> Back to Appointments
-          </button>
+          </Link>
 
           <div className={styles.detailLayout}>
             {/* Main Column */}
@@ -97,10 +115,10 @@ export default function DoctorAppointmentDetailPage() {
                 <div className={styles.statusHeader}>
                   <div className={styles.patientRow}>
                     <div className="avatar avatar-lg avatar-accent">
-                      {getInitials(appointment.patientName)}
+                      {getInitials(patientName)}
                     </div>
                     <div>
-                      <h2 className={styles.patientName}>{appointment.patientName}</h2>
+                      <h2 className={styles.patientName}>{patientName}</h2>
                       <p className={styles.patientId}>Patient ID: {appointment.patientId}</p>
                     </div>
                   </div>
@@ -127,14 +145,14 @@ export default function DoctorAppointmentDetailPage() {
                     <UserIcon size={16} />
                     <div>
                       <span className={styles.metaLabel}>Doctor</span>
-                      <span className={styles.metaValue}>{appointment.doctorName}</span>
+                      <span className={styles.metaValue}>{appointment.doctor.user.name}</span>
                     </div>
                   </div>
                   <div className={styles.metaItem}>
                     <HeartIcon size={16} />
                     <div>
                       <span className={styles.metaLabel}>Specialty</span>
-                      <span className={styles.metaValue}>{appointment.doctorSpecialization}</span>
+                      <span className={styles.metaValue}>{appointment.doctor.specialization}</span>
                     </div>
                   </div>
                 </div>
@@ -142,9 +160,12 @@ export default function DoctorAppointmentDetailPage() {
                 {/* Action buttons */}
                 <div className={styles.actionRow}>
                   {appointment.status === 'BOOKED' && (
-                    <Link href={`/doctor/appointments/${appointment.id}/notes`} className="btn btn-primary">
-                      <FileTextIcon size={16} /> Add Post-Visit Notes
-                    </Link>
+                    <>
+                      <Link href={`/doctor/appointments/${appointment.id}/notes`} className="btn btn-primary">
+                        <FileTextIcon size={16} /> Add Post-Visit Notes
+                      </Link>
+                      <CancelAppointmentButton appointmentId={appointment.id} />
+                    </>
                   )}
                   {appointment.status === 'COMPLETED' && !postVisit && (
                     <Link href={`/doctor/appointments/${appointment.id}/notes`} className="btn btn-primary">
@@ -160,6 +181,27 @@ export default function DoctorAppointmentDetailPage() {
               </div>
 
               {/* AI Pre-Visit Summary */}
+              {preVisit && preVisit.llmStatus === 'FAILED' && (
+                <div className={`card ${styles.aiCard}`} style={{ borderLeft: '4px solid var(--danger-500)' }}>
+                  <div className={styles.aiHeader}>
+                    <AlertTriangleIcon size={20} style={{ color: 'var(--danger-500)' }} />
+                    <h3 style={{ color: 'var(--danger-700)' }}>AI Generation Failed</h3>
+                  </div>
+                  <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
+                    The clinical summary couldn&apos;t be generated. The patient&apos;s original symptoms are still available below.
+                  </p>
+                  
+                  <div className={styles.aiSection} style={{ marginBottom: 'var(--space-4)' }}>
+                    <h4>Patient&apos;s Words</h4>
+                    <p style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', backgroundColor: 'var(--slate-50)', padding: 'var(--space-3)', borderRadius: 'var(--radius-sm)' }}>
+                      {preVisit.rawSymptoms}
+                    </p>
+                  </div>
+
+                  <RetryAIButton appointmentId={appointment.id} />
+                </div>
+              )}
+
               {preVisit && preVisit.llmStatus === 'OK' && (
                 <div className={`card ${styles.aiCard}`}>
                   <div className={styles.aiHeader}>
@@ -195,11 +237,11 @@ export default function DoctorAppointmentDetailPage() {
                       </div>
                     )}
 
-                    {preVisit.differentialDiagnosis && preVisit.differentialDiagnosis.length > 0 && (
+                    {preVisit.differentialDiagnosis && (Array.isArray(preVisit.differentialDiagnosis) ? preVisit.differentialDiagnosis as string[] : []).length > 0 && (
                       <div className={styles.aiSection}>
                         <h4>Differential Diagnosis</h4>
                         <ul className={styles.diagnosisList}>
-                          {preVisit.differentialDiagnosis.map((d, i) => (
+                          {(preVisit.differentialDiagnosis as string[]).map((d, i) => (
                             <li key={i}>
                               <ActivityIcon size={14} />
                               <span>{d}</span>
@@ -209,11 +251,11 @@ export default function DoctorAppointmentDetailPage() {
                       </div>
                     )}
 
-                    {preVisit.redFlags && preVisit.redFlags.length > 0 && (
+                    {preVisit.redFlags && (Array.isArray(preVisit.redFlags) ? preVisit.redFlags as string[] : []).length > 0 && (
                       <div className={styles.aiSection}>
                         <h4 className={styles.redFlagTitle}>⚠️ Red Flags</h4>
                         <ul className={styles.redFlagList}>
-                          {preVisit.redFlags.map((f, i) => (
+                          {(preVisit.redFlags as string[]).map((f, i) => (
                             <li key={i}>
                               <AlertTriangleIcon size={14} />
                               <span>{f}</span>
@@ -223,11 +265,11 @@ export default function DoctorAppointmentDetailPage() {
                       </div>
                     )}
 
-                    {preVisit.suggestedQuestions && preVisit.suggestedQuestions.length > 0 && (
+                    {preVisit.suggestedQuestions && (Array.isArray(preVisit.suggestedQuestions) ? preVisit.suggestedQuestions as string[] : []).length > 0 && (
                       <div className={styles.aiSection}>
                         <h4>Suggested Questions</h4>
                         <ol className={styles.questionList}>
-                          {preVisit.suggestedQuestions.map((q, i) => (
+                          {(preVisit.suggestedQuestions as string[]).map((q, i) => (
                             <li key={i}>{q}</li>
                           ))}
                         </ol>
@@ -238,6 +280,30 @@ export default function DoctorAppointmentDetailPage() {
               )}
 
               {/* Post-Visit Notes (if completed) */}
+              {postVisit && postVisit.llmStatus === 'FAILED' && (
+                <div className={`card ${styles.notesCard}`} style={{ borderLeft: '4px solid var(--danger-500)' }}>
+                  <div className={styles.notesHeader}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                      <AlertTriangleIcon size={20} style={{ color: 'var(--danger-500)' }} />
+                      <h3 style={{ color: 'var(--danger-700)', margin: 0 }}>Summary Generation Failed</h3>
+                    </div>
+                  </div>
+                  <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>
+                    The AI failed to generate the patient-friendly summary for your notes. Your clinical notes were saved safely.
+                  </p>
+                  
+                  <div className={styles.aiSection}>
+                    <h4>Your Clinical Notes</h4>
+                    <p className={styles.clinicalNotes} style={{ backgroundColor: 'var(--slate-50)', padding: 'var(--space-3)', borderRadius: 'var(--radius-sm)' }}>
+                      {postVisit.clinicalNotes}
+                    </p>
+                  </div>
+                  <div style={{ marginTop: 'var(--space-4)' }}>
+                    <RetryPostVisitAIButton appointmentId={appointment.id} />
+                  </div>
+                </div>
+              )}
+
               {postVisit && postVisit.llmStatus === 'OK' && (
                 <div className={`card ${styles.notesCard}`}>
                   <div className={styles.notesHeader}>
@@ -251,11 +317,11 @@ export default function DoctorAppointmentDetailPage() {
                     <p className={styles.clinicalNotes}>{postVisit.clinicalNotes}</p>
                   </div>
 
-                  {postVisit.prescription.length > 0 && (
+                  {postVisit.prescriptions.length > 0 && (
                     <div className={styles.aiSection}>
                       <h4>Prescriptions</h4>
                       <div className={styles.rxGrid}>
-                        {postVisit.prescription.map((rx, i) => (
+                        {postVisit.prescriptions.map((rx, i) => (
                           <div key={i} className={styles.rxCard}>
                             <span className={styles.rxPill}>💊</span>
                             <div className={styles.rxInfo}>

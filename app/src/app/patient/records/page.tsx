@@ -1,31 +1,40 @@
-'use client';
-
-import { useMemo } from 'react';
+import { requireAuth } from '@/lib/session';
+import { Role } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import {
-  ClipboardIcon, CalendarIcon, ClockIcon, SparklesIcon,
-  FileTextIcon, ChevronRightIcon, PillIcon, HeartIcon
+  ClipboardIcon, ClockIcon, SparklesIcon,
+  ChevronRightIcon, PillIcon, HeartIcon
 } from '@/components/Icons';
-import { mockCurrentUser, mockAppointments } from '@/lib/mockData';
 import Link from 'next/link';
 import styles from './page.module.css';
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+function formatDate(date: Date) {
+  return new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
-export default function PatientRecordsPage() {
-  // Only completed appointments are part of medical history
-  const medicalRecords = useMemo(() => {
-    return mockAppointments
-      .filter(a => a.patientId === mockCurrentUser.id && a.status === 'COMPLETED')
-      .sort((a, b) => new Date(b.slotStart).getTime() - new Date(a.slotStart).getTime());
-  }, []);
+export default async function PatientRecordsPage() {
+  const user = await requireAuth(Role.PATIENT);
+
+  const medicalRecords = await prisma.appointment.findMany({
+    where: {
+      patient: { userId: user.id },
+      status: 'COMPLETED',
+    },
+    orderBy: { slotStart: 'desc' },
+    include: {
+      doctor: { include: { user: true } },
+      preVisitSummary: true,
+      postVisitNote: { include: { prescriptions: true } },
+    },
+  });
+
+  const uniqueDoctors = new Set(medicalRecords.map(r => r.doctor.id)).size;
 
   return (
     <div className="dashboard-layout">
-      <Sidebar role="PATIENT" userName={mockCurrentUser.name} userEmail={mockCurrentUser.email} />
+      <Sidebar role="PATIENT" userName={user.name} userEmail={user.email} />
       <div className="main-content">
         <Navbar title="Medical Records" subtitle="Your health history and visit summaries" />
         <main className="page-content">
@@ -43,7 +52,7 @@ export default function PatientRecordsPage() {
               <div className={styles.statCard}>
                 <div className={styles.statIcon} style={{ background: 'var(--success-50)', color: 'var(--success-600)' }}><HeartIcon size={24} /></div>
                 <div className={styles.statInfo}>
-                  <span className={styles.statValue}>{new Set(medicalRecords.map(r => r.doctorName)).size}</span>
+                  <span className={styles.statValue}>{uniqueDoctors}</span>
                   <span className={styles.statLabel}>Different Doctors</span>
                 </div>
               </div>
@@ -70,8 +79,8 @@ export default function PatientRecordsPage() {
                       <div className={`card ${styles.recordCard}`}>
                         <div className={styles.recordHeader}>
                           <div className={styles.doctorInfo}>
-                            <h3 className={styles.doctorName}>{record.doctorName}</h3>
-                            <span className={styles.doctorSpecialty}>{record.doctorSpecialization}</span>
+                            <h3 className={styles.doctorName}>{record.doctor.user.name}</h3>
+                            <span className={styles.doctorSpecialty}>{record.doctor.specialization}</span>
                           </div>
                           <Link href={`/patient/appointments/${record.id}`} className="btn btn-ghost btn-sm">
                             View Full Details <ChevronRightIcon size={14} />
@@ -107,10 +116,10 @@ export default function PatientRecordsPage() {
                           )}
 
                           {/* Prescriptions quick view */}
-                          {record.postVisitNote && record.postVisitNote.prescription.length > 0 && (
+                          {record.postVisitNote && record.postVisitNote.prescriptions.length > 0 && (
                             <div className={styles.rxQuickView}>
                               <PillIcon size={14} style={{ color: 'var(--text-tertiary)' }} />
-                              <span>Prescribed {record.postVisitNote.prescription.length} medication(s)</span>
+                              <span>Prescribed {record.postVisitNote.prescriptions.length} medication(s)</span>
                             </div>
                           )}
                         </div>

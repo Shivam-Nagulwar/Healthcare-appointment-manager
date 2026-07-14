@@ -1,5 +1,6 @@
-'use client';
-
+import { requireAuth } from '@/lib/session';
+import { Role } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import {
@@ -8,25 +9,55 @@ import {
   EyeIcon, TrashIcon, SearchIcon, StarFilledIcon,
   AlertTriangleIcon, CheckIcon, ClockIcon,
 } from '@/components/Icons';
-import { mockAdminUser, mockDoctors, mockAppointments, mockDoctorLeaves } from '@/lib/mockData';
 import Link from 'next/link';
 import styles from './page.module.css';
+import CronTriggerCard from './CronTriggerCard';
 
 function getInitials(name: string) {
   return name.split(' ').filter(n => n).map(n => n[0]).join('').slice(0, 2).toUpperCase();
 }
 
-export default function AdminDashboard() {
-  const user = mockAdminUser;
-  const totalDoctors = mockDoctors.length;
-  const totalAppointments = mockAppointments.length;
-  const todayAppointments = mockAppointments.filter(a => {
-    const d = new Date(a.slotStart);
-    return d.toDateString() === new Date().toDateString();
+export default async function AdminDashboard() {
+  const user = await requireAuth(Role.ADMIN);
+
+  // Fetch all required data
+  const [
+    totalDoctors,
+    appointments,
+    doctorLeaves,
+    doctors
+  ] = await Promise.all([
+    prisma.doctorProfile.count(),
+    prisma.appointment.findMany({ select: { status: true, slotStart: true } }),
+    prisma.doctorLeave.findMany({
+      where: { endDate: { gte: new Date() } },
+      include: { doctor: { include: { user: true } } },
+      orderBy: { startDate: 'asc' },
+      take: 5
+    }),
+    prisma.doctorProfile.findMany({
+      include: { user: true, leaves: true },
+      take: 10
+    })
+  ]);
+
+  const totalAppointments = appointments.length;
+  
+  const today = new Date();
+  const todayAppointments = appointments.filter(a => {
+    return a.slotStart.toDateString() === today.toDateString();
   }).length;
-  const activeLeaves = mockDoctorLeaves.length;
-  const completedAppointments = mockAppointments.filter(a => a.status === 'COMPLETED').length;
-  const cancelledAppointments = mockAppointments.filter(a => a.status === 'CANCELLED').length;
+  
+  const activeLeaves = await prisma.doctorLeave.count({
+    where: {
+      startDate: { lte: today },
+      endDate: { gte: today }
+    }
+  });
+
+  const bookedAppointments = appointments.filter(a => a.status === 'BOOKED').length;
+  const completedAppointments = appointments.filter(a => a.status === 'COMPLETED').length;
+  const cancelledAppointments = appointments.filter(a => a.status === 'CANCELLED').length;
 
   return (
     <div className="dashboard-layout">
@@ -77,6 +108,8 @@ export default function AdminDashboard() {
             </div>
           </div>
 
+          <CronTriggerCard />
+
           <div className={styles.mainGrid}>
             {/* Doctors Table */}
             <div className={styles.tableSection}>
@@ -109,18 +142,23 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {mockDoctors.map((doc, idx) => {
-                      const hasLeave = mockDoctorLeaves.some(l => l.doctorId === doc.id);
+                    {doctors.map((doc, idx) => {
+                      const hasLeave = doc.leaves.some(l => {
+                        const start = new Date(l.startDate);
+                        const end = new Date(l.endDate);
+                        return today >= start && today <= end;
+                      });
+                      
                       return (
                         <tr key={doc.id} className="animate-fade-in-up" style={{ animationDelay: `${idx * 50}ms` }}>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                               <div className="avatar avatar-sm avatar-primary">
-                                {getInitials(doc.name)}
+                                {getInitials(doc.user.name)}
                               </div>
                               <div>
-                                <div style={{ fontWeight: 600 }}>{doc.name}</div>
-                                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{doc.email}</div>
+                                <div style={{ fontWeight: 600 }}>{doc.user.name}</div>
+                                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{doc.user.email}</div>
                               </div>
                             </div>
                           </td>
@@ -175,7 +213,7 @@ export default function AdminDashboard() {
                       <span className={styles.breakdownDot} style={{ background: 'var(--primary-500)' }} />
                       Booked
                     </div>
-                    <span className={styles.breakdownValue}>{mockAppointments.filter(a => a.status === 'BOOKED').length}</span>
+                    <span className={styles.breakdownValue}>{bookedAppointments}</span>
                   </div>
                   <div className={styles.breakdownItem}>
                     <div className={styles.breakdownLabel}>
@@ -198,7 +236,7 @@ export default function AdminDashboard() {
                   <div
                     className={styles.progressSegment}
                     style={{
-                      width: `${(mockAppointments.filter(a => a.status === 'BOOKED').length / totalAppointments) * 100}%`,
+                      width: `${(bookedAppointments / Math.max(totalAppointments, 1)) * 100}%`,
                       background: 'var(--primary-500)',
                       borderRadius: 'var(--radius-full) 0 0 var(--radius-full)',
                     }}
@@ -206,14 +244,14 @@ export default function AdminDashboard() {
                   <div
                     className={styles.progressSegment}
                     style={{
-                      width: `${(completedAppointments / totalAppointments) * 100}%`,
+                      width: `${(completedAppointments / Math.max(totalAppointments, 1)) * 100}%`,
                       background: 'var(--success-500)',
                     }}
                   />
                   <div
                     className={styles.progressSegment}
                     style={{
-                      width: `${(cancelledAppointments / totalAppointments) * 100}%`,
+                      width: `${(cancelledAppointments / Math.max(totalAppointments, 1)) * 100}%`,
                       background: 'var(--danger-500)',
                       borderRadius: '0 var(--radius-full) var(--radius-full) 0',
                     }}
@@ -230,22 +268,22 @@ export default function AdminDashboard() {
                   </Link>
                 </div>
                 <div className={styles.leaveList}>
-                  {mockDoctorLeaves.map(leave => (
+                  {doctorLeaves.map(leave => (
                     <div key={leave.id} className={styles.leaveItem}>
                       <div className="avatar avatar-sm avatar-accent">
-                        {getInitials(leave.doctorName)}
+                        {getInitials(leave.doctor.user.name)}
                       </div>
                       <div className={styles.leaveInfo}>
-                        <span className={styles.leaveName}>{leave.doctorName}</span>
+                        <span className={styles.leaveName}>{leave.doctor.user.name}</span>
                         <span className={styles.leaveDate}>
-                          {new Date(leave.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          {leave.startDate !== leave.endDate && ` - ${new Date(leave.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                          {leave.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          {leave.startDate.getTime() !== leave.endDate.getTime() && ` - ${leave.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
                         </span>
                       </div>
                       <span className="badge badge-warning">{leave.reason || 'Personal'}</span>
                     </div>
                   ))}
-                  {mockDoctorLeaves.length === 0 && (
+                  {doctorLeaves.length === 0 && (
                     <p style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)' }}>No upcoming leaves</p>
                   )}
                 </div>

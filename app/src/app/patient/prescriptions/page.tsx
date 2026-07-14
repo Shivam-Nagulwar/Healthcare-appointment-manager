@@ -1,37 +1,56 @@
-'use client';
-
-import { useMemo } from 'react';
+import { requireAuth } from '@/lib/session';
+import { Role } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import {
   HeartIcon, CalendarIcon, UserIcon, CheckIcon, PillIcon
 } from '@/components/Icons';
-import { mockCurrentUser, mockAppointments } from '@/lib/mockData';
 import styles from './page.module.css';
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+function formatDate(date: Date) {
+  return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export default function PatientPrescriptionsPage() {
-  const prescriptions = useMemo(() => {
-    const patientApts = mockAppointments.filter(a => a.patientId === mockCurrentUser.id && a.status === 'COMPLETED' && a.postVisitNote && a.postVisitNote.prescription.length > 0);
-    
-    const allPrescriptions = [];
-    for (const apt of patientApts) {
-      for (const rx of apt.postVisitNote!.prescription) {
-        allPrescriptions.push({
-          ...rx,
-          datePrescribed: apt.slotStart,
-          doctorName: apt.doctorName,
-          appointmentId: apt.id
-        });
+export default async function PatientPrescriptionsPage() {
+  const user = await requireAuth(Role.PATIENT);
+
+  const dbPrescriptions = await prisma.prescriptionItem.findMany({
+    where: {
+      postVisitNote: {
+        appointment: {
+          patient: { userId: user.id },
+          status: 'COMPLETED'
+        }
+      }
+    },
+    include: {
+      postVisitNote: {
+        include: {
+          appointment: {
+            include: {
+              doctor: { include: { user: true } }
+            }
+          }
+        }
+      }
+    },
+    orderBy: {
+      postVisitNote: {
+        appointment: { slotStart: 'desc' }
       }
     }
-    
-    // Sort by most recent
-    return allPrescriptions.sort((a, b) => new Date(b.datePrescribed).getTime() - new Date(a.datePrescribed).getTime());
-  }, []);
+  });
+
+  const prescriptions = dbPrescriptions.map(rx => ({
+    medication: rx.medication,
+    dosage: rx.dosage,
+    frequency: rx.frequency,
+    durationDays: rx.durationDays,
+    datePrescribed: rx.postVisitNote.appointment.slotStart,
+    doctorName: rx.postVisitNote.appointment.doctor.user.name,
+    appointmentId: rx.postVisitNote.appointment.id
+  }));
 
   const activePrescriptions = prescriptions.filter(rx => {
     const prescribedDate = new Date(rx.datePrescribed);
@@ -51,7 +70,7 @@ export default function PatientPrescriptionsPage() {
 
   return (
     <div className="dashboard-layout">
-      <Sidebar role="PATIENT" userName={mockCurrentUser.name} userEmail={mockCurrentUser.email} />
+      <Sidebar role="PATIENT" userName={user.name} userEmail={user.email} />
       <div className="main-content">
         <Navbar title="My Prescriptions" subtitle="Manage your medications and active prescriptions" />
         <main className="page-content">

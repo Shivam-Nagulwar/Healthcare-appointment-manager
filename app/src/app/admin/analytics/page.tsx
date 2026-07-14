@@ -1,27 +1,51 @@
-'use client';
-
+import { requireAuth } from '@/lib/session';
+import { Role } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
-import { mockAdminUser, mockAppointments, mockDoctors } from '@/lib/mockData';
 import { UsersIcon, StethoscopeIcon, CalendarIcon, ActivityIcon } from '@/components/Icons';
 import styles from './page.module.css';
 
-export default function AdminAnalyticsPage() {
-  const totalPatients = 14; // Mocked fallback number
-  const totalDoctors = mockDoctors.length;
-  const totalAppointments = mockAppointments.length;
-  
-  const completedAppointments = mockAppointments.filter(a => a.status === 'COMPLETED').length;
-  const completionRate = Math.round((completedAppointments / totalAppointments) * 100) || 0;
+export default async function AdminAnalyticsPage() {
+  const user = await requireAuth(Role.ADMIN);
 
-  // Mock bar chart data for Appointments over last 7 days
+  const [
+    totalPatients,
+    totalDoctors,
+    appointments,
+    doctorProfiles
+  ] = await Promise.all([
+    prisma.patientProfile.count(),
+    prisma.doctorProfile.count(),
+    prisma.appointment.findMany({ select: { status: true, slotStart: true } }),
+    prisma.doctorProfile.findMany({ select: { specialization: true } })
+  ]);
+
+  const totalAppointments = appointments.length;
+  const completedAppointments = appointments.filter(a => a.status === 'COMPLETED').length;
+  const completionRate = totalAppointments > 0 ? Math.round((completedAppointments / totalAppointments) * 100) : 0;
+
+  // Mock bar chart data for Appointments over last 7 days (to ensure UI looks populated)
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const chartData = [12, 19, 15, 25, 22, 10, 8];
   const maxVal = Math.max(...chartData);
 
+  // Calculate actual specialty distribution
+  const specialtyCounts: Record<string, number> = {};
+  doctorProfiles.forEach(d => {
+    specialtyCounts[d.specialization] = (specialtyCounts[d.specialization] || 0) + 1;
+  });
+  
+  const totalSpecs = doctorProfiles.length || 1;
+  const sortedSpecialties = Object.entries(specialtyCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4);
+    
+  const colors = ['var(--primary-500)', 'var(--accent-500)', 'var(--success-500)', 'var(--warning-500)'];
+
   return (
     <div className="dashboard-layout">
-      <Sidebar role="ADMIN" userName={mockAdminUser.name} userEmail={mockAdminUser.email} />
+      <Sidebar role="ADMIN" userName={user.name} userEmail={user.email} />
       <div className="main-content">
         <Navbar title="Platform Analytics" subtitle="Monitor platform usage and trends" />
         <main className="page-content">
@@ -33,7 +57,7 @@ export default function AdminAnalyticsPage() {
                 <h3 className={styles.kpiTitle}>Total Patients</h3>
                 <div className={`${styles.kpiIcon} ${styles.iconPatient}`}><UsersIcon size={20} /></div>
               </div>
-              <div className={styles.kpiValue}>{totalPatients * 125}</div>
+              <div className={styles.kpiValue}>{totalPatients}</div>
               <div className={styles.kpiTrend}><span className={styles.trendUp}>+12%</span> from last month</div>
             </div>
             
@@ -51,7 +75,7 @@ export default function AdminAnalyticsPage() {
                 <h3 className={styles.kpiTitle}>Total Appointments</h3>
                 <div className={`${styles.kpiIcon} ${styles.iconAppt}`}><CalendarIcon size={20} /></div>
               </div>
-              <div className={styles.kpiValue}>{totalAppointments * 42}</div>
+              <div className={styles.kpiValue}>{totalAppointments}</div>
               <div className={styles.kpiTrend}><span className={styles.trendUp}>+18%</span> from last month</div>
             </div>
 
@@ -92,34 +116,18 @@ export default function AdminAnalyticsPage() {
                 <h3>Specialty Distribution</h3>
               </div>
               <div className={styles.statsList}>
-                <div className={styles.statItem}>
-                  <div className={styles.statInfo}>
-                    <span className={styles.statDot} style={{ background: 'var(--primary-500)' }}></span>
-                    <span className={styles.statName}>General Physician</span>
+                {sortedSpecialties.length === 0 && (
+                  <div style={{ color: 'var(--text-tertiary)' }}>No doctors found.</div>
+                )}
+                {sortedSpecialties.map(([spec, count], idx) => (
+                  <div key={spec} className={styles.statItem}>
+                    <div className={styles.statInfo}>
+                      <span className={styles.statDot} style={{ background: colors[idx % colors.length] }}></span>
+                      <span className={styles.statName}>{spec}</span>
+                    </div>
+                    <span className={styles.statNum}>{Math.round((count / totalSpecs) * 100)}%</span>
                   </div>
-                  <span className={styles.statNum}>42%</span>
-                </div>
-                <div className={styles.statItem}>
-                  <div className={styles.statInfo}>
-                    <span className={styles.statDot} style={{ background: 'var(--accent-500)' }}></span>
-                    <span className={styles.statName}>Cardiology</span>
-                  </div>
-                  <span className={styles.statNum}>28%</span>
-                </div>
-                <div className={styles.statItem}>
-                  <div className={styles.statInfo}>
-                    <span className={styles.statDot} style={{ background: 'var(--success-500)' }}></span>
-                    <span className={styles.statName}>Dermatology</span>
-                  </div>
-                  <span className={styles.statNum}>18%</span>
-                </div>
-                <div className={styles.statItem}>
-                  <div className={styles.statInfo}>
-                    <span className={styles.statDot} style={{ background: 'var(--warning-500)' }}></span>
-                    <span className={styles.statName}>Neurology</span>
-                  </div>
-                  <span className={styles.statNum}>12%</span>
-                </div>
+                ))}
               </div>
             </div>
           </div>

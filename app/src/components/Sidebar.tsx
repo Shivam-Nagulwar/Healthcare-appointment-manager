@@ -9,7 +9,8 @@ import {
   SunIcon, MoonIcon, HeartIcon, BarChartIcon,
   StethoscopeIcon, ShieldIcon,
 } from './Icons';
-import type { Role } from '@/lib/mockData';
+import type { Role } from '@prisma/client';
+import { logout } from '@/actions/auth';
 
 interface SidebarProps {
   role: Role;
@@ -178,13 +179,16 @@ export default function Sidebar({ role, userName, userEmail }: SidebarProps) {
               {getRoleLabel(role)}
             </div>
           </div>
-          <button
-            className="btn btn-ghost btn-icon"
-            title="Sign Out"
-            style={{ marginLeft: 'auto', color: 'var(--text-tertiary)' }}
-          >
-            <LogOutIcon size={16} />
-          </button>
+          <form action={logout} style={{ marginLeft: 'auto' }}>
+            <button
+              type="submit"
+              className="btn btn-ghost btn-icon"
+              title="Sign Out"
+              style={{ color: 'var(--text-tertiary)' }}
+            >
+              <LogOutIcon size={16} />
+            </button>
+          </form>
         </div>
       </div>
     </aside>

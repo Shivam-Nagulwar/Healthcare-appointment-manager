@@ -1,5 +1,3 @@
-'use client';
-
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import {
@@ -7,9 +5,10 @@ import {
   StarFilledIcon, MapPinIcon, SparklesIcon, ActivityIcon,
   TrendingUpIcon, HeartIcon, AlertTriangleIcon,
 } from '@/components/Icons';
-import { mockCurrentUser, mockAppointments, mockDoctors } from '@/lib/mockData';
-import type { Appointment } from '@/lib/mockData';
 import Link from 'next/link';
+import { requireAuth } from '@/lib/session';
+import { Role } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import styles from './page.module.css';
 
 function getStatusBadge(status: string) {
@@ -34,15 +33,15 @@ function getUrgencyBadge(level: string | null | undefined) {
   return <span className={`badge ${className}`}>{level}</span>;
 }
 
-function formatTime(iso: string) {
+function formatTime(iso: string | Date) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
-function formatDate(iso: string) {
+function formatDate(iso: string | Date) {
   return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-function getRelativeDay(iso: string) {
+function getRelativeDay(iso: string | Date) {
   const date = new Date(iso);
   const today = new Date();
   const tomorrow = new Date(today);
@@ -57,15 +56,38 @@ function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 }
 
-export default function PatientDashboard() {
-  const user = mockCurrentUser;
-  const patientAppointments = mockAppointments.filter(a => a.patientName === user.name);
-  const upcoming = patientAppointments
-    .filter(a => a.status === 'BOOKED')
-    .sort((a, b) => new Date(a.slotStart).getTime() - new Date(b.slotStart).getTime());
-  const past = patientAppointments
-    .filter(a => a.status === 'COMPLETED')
-    .sort((a, b) => new Date(b.slotStart).getTime() - new Date(a.slotStart).getTime());
+export default async function PatientDashboard() {
+  const user = await requireAuth(Role.PATIENT);
+  
+  const dbAppointments = await prisma.appointment.findMany({
+    where: { patient: { userId: user.id } },
+    include: {
+      doctor: { include: { user: true } },
+      preVisitSummary: true,
+      postVisitNote: true,
+    },
+    orderBy: { slotStart: 'asc' },
+  });
+
+  const patientAppointments = dbAppointments.map(a => ({
+    id: a.id,
+    status: a.status,
+    slotStart: a.slotStart,
+    slotEnd: a.slotEnd,
+    doctorName: a.doctor.user.name,
+    doctorSpecialization: a.doctor.specialization,
+    preVisitSummary: a.preVisitSummary,
+    postVisitNote: a.postVisitNote,
+  }));
+
+  const upcoming = patientAppointments.filter(a => a.status === 'BOOKED');
+  const past = patientAppointments.filter(a => a.status === 'COMPLETED').reverse();
+
+  const recommendedDoctors = await prisma.doctorProfile.findMany({
+    include: { user: true },
+    take: 3,
+    orderBy: { rating: 'desc' },
+  });
 
   const greeting = () => {
     const hour = new Date().getHours();
@@ -224,17 +246,17 @@ export default function PatientDashboard() {
               <div className="card animate-fade-in-up" style={{ marginTop: 'var(--space-6)' }}>
                 <h3 className={styles.cardTitle}>Recommended Doctors</h3>
                 <div className={styles.doctorsList}>
-                  {mockDoctors.slice(0, 3).map((doc) => (
+                  {recommendedDoctors.slice(0, 3).map((doc) => (
                     <Link
                       key={doc.id}
                       href={`/patient/doctors/${doc.id}`}
                       className={styles.doctorMini}
                     >
                       <div className="avatar avatar-sm avatar-primary">
-                        {getInitials(doc.name)}
+                        {getInitials(doc.user.name)}
                       </div>
                       <div className={styles.doctorMiniInfo}>
-                        <span className={styles.doctorMiniName}>{doc.name}</span>
+                        <span className={styles.doctorMiniName}>{doc.user.name}</span>
                         <span className={styles.doctorMiniSpec}>{doc.specialization}</span>
                       </div>
                       <div className={styles.doctorMiniRating}>
@@ -263,7 +285,7 @@ export default function PatientDashboard() {
   );
 }
 
-function AppointmentCard({ appointment, index }: { appointment: Appointment; index: number }) {
+function AppointmentCard({ appointment, index }: { appointment: any; index: number }) {
   const isUrgent = appointment.preVisitSummary?.urgencyLevel === 'HIGH';
 
   return (
@@ -320,7 +342,7 @@ function AppointmentCard({ appointment, index }: { appointment: Appointment; ind
             <div className={styles.suggestedQuestions}>
               <p className={styles.sqLabel}>Suggested questions:</p>
               <ul>
-                {appointment.preVisitSummary.suggestedQuestions.slice(0, 2).map((q, i) => (
+                {((appointment.preVisitSummary.suggestedQuestions as string[]) || []).slice(0, 2).map((q: string, i: number) => (
                   <li key={i}>{q}</li>
                 ))}
               </ul>

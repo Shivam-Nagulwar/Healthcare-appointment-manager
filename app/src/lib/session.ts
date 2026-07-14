@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import prisma from '@/lib/prisma';
 import { Role } from '@prisma/client';
+import { redirect } from 'next/navigation';
 
 /**
  * Reads the currently logged in user from the session cookie.
@@ -27,10 +28,10 @@ export async function getCurrentUser() {
 export async function requireAuth(role?: Role) {
   const user = await getCurrentUser();
   if (!user) {
-    throw new Error('Unauthorized');
+    redirect('/login');
   }
   if (role && user.role !== role) {
-    throw new Error('Forbidden');
+    redirect('/');
   }
   return user;
 }
