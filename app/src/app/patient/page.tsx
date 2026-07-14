@@ -8,6 +8,7 @@ import {
 import Link from 'next/link';
 import { requireAuth } from '@/lib/session';
 import { Role } from '@prisma/client';
+import { notFound } from 'next/navigation';
 import prisma from '@/lib/prisma';
 import styles from './page.module.css';
 
@@ -58,6 +59,13 @@ function getInitials(name: string) {
 
 export default async function PatientDashboard() {
   const user = await requireAuth(Role.PATIENT);
+  
+  const dbPatient = await prisma.patientProfile.findUnique({
+    where: { userId: user.id }
+  });
+  if (!dbPatient) {
+    notFound();
+  }
   
   const dbAppointments = await prisma.appointment.findMany({
     where: { patient: { userId: user.id } },
@@ -216,6 +224,26 @@ export default async function PatientDashboard() {
 
             {/* Right Column — Sidebar Info */}
             <div className={styles.rightColumn}>
+              {/* Google Calendar Integration */}
+              <div className="card animate-fade-in-up" style={{ marginBottom: 'var(--space-6)', borderLeft: dbPatient.googleRefreshToken ? '4px solid var(--success-500)' : '4px solid var(--warning-500)' }}>
+                <h3 className={styles.cardTitle} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                  <CalendarIcon size={18} /> Google Calendar
+                </h3>
+                {dbPatient.googleRefreshToken ? (
+                  <div>
+                    <p style={{ color: 'var(--success-600)', fontSize: 'var(--text-sm)', fontWeight: 500, marginBottom: 'var(--space-2)' }}>✓ Connected</p>
+                    <p style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)' }}>Appointments are directly syncing to your Google Calendar.</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', marginBottom: 'var(--space-4)' }}>Connect your calendar to automatically sync your appointments.</p>
+                    <a href="/api/auth/google/login" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
+                      Connect Calendar
+                    </a>
+                  </div>
+                )}
+              </div>
+
               {/* Recent Activity */}
               <div className="card animate-fade-in-up">
                 <h3 className={styles.cardTitle}>Recent Activity</h3>

@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { registerUser } from '@/actions/auth';
 import { StethoscopeIcon, ArrowRightIcon, MailIcon, LockIcon, UserIcon } from '@/components/Icons';
 import styles from '../login/page.module.css'; 
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -17,11 +19,18 @@ export default function RegisterPage() {
     const formData = new FormData(e.currentTarget);
     formData.set('role', 'PATIENT');
 
-    const res = await registerUser(formData);
-    
-    // registerUser redirects on success. If it returns, there was an error.
-    if (res?.error) {
-      setError(res.error);
+    try {
+      const res = await registerUser(formData);
+      
+      if (res?.error) {
+        setError(res.error);
+        setIsSubmitting(false);
+      } else if (res?.success && res?.redirectUrl) {
+        router.push(res.redirectUrl);
+      }
+    } catch (err) {
+      console.error(err);
+      setError('An unexpected error occurred. Please try again.');
       setIsSubmitting(false);
     }
   };

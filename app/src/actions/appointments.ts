@@ -5,6 +5,7 @@ import { requireAuth } from '@/lib/session';
 import { Role } from '@prisma/client';
 import { generatePreVisitSummary } from '@/lib/ai';
 import { sendBookingConfirmation, sendBookingCancellation } from '@/lib/email';
+import { createCalendarEvent, deleteCalendarEvent, createPatientCalendarEvent, deletePatientCalendarEvent } from '@/lib/calendar';
 import { revalidatePath } from 'next/cache';
 
 export async function holdAppointmentSlot(doctorId: string, slotStart: string, slotEnd: string) {
@@ -115,7 +116,8 @@ export async function bookAppointment(appointmentId: string, symptoms: string) {
     },
     include: {
       patient: { include: { user: true } },
-      doctor: { include: { user: true } }
+      doctor: { include: { user: true } },
+      preVisitSummary: true
     }
   });
 
@@ -129,6 +131,44 @@ export async function bookAppointment(appointmentId: string, symptoms: string) {
     );
   } catch (err) {
     console.error('Failed to send confirmation email', err);
+  }
+
+  // Create Google Calendar Event
+  try {
+    const hasPatientConnectedCalendar = !!updated.patient.googleRefreshToken;
+
+    const googleEventId = await createCalendarEvent(
+      updated.doctorId,
+      updated.patient.user.email,
+      updated.patient.user.name,
+      updated.slotStart,
+      updated.slotEnd,
+      `Appointment with ${updated.patient.user.name}. Chief Complaint: ${updated.preVisitSummary?.chiefComplaint || 'None provided'}`,
+      !hasPatientConnectedCalendar // Add attendee if patient has NOT connected their calendar
+    );
+
+    let patientGoogleEventId = null;
+    if (hasPatientConnectedCalendar) {
+      patientGoogleEventId = await createPatientCalendarEvent(
+        updated.patientId,
+        updated.doctor.user.name,
+        updated.slotStart,
+        updated.slotEnd,
+        `Appointment with Dr. ${updated.doctor.user.name}.`
+      );
+    }
+
+    if (googleEventId || patientGoogleEventId) {
+      await prisma.appointment.update({
+        where: { id: appointmentId },
+        data: { 
+          ...(googleEventId ? { googleEventId } : {}),
+          ...(patientGoogleEventId ? { patientGoogleEventId } : {})
+        }
+      });
+    }
+  } catch (err) {
+    console.error('Failed to create google calendar event', err);
   }
 
   revalidatePath('/patient/doctors');
@@ -238,6 +278,14 @@ export async function cancelAppointment(appointmentId: string) {
     );
   } catch (err) {
     console.error('Failed to send cancellation email', err);
+  }
+
+  // 3. Delete Google Calendar Event
+  if (appointment.googleEventId) {
+    await deleteCalendarEvent(appointment.doctorId, appointment.googleEventId);
+  }
+  if (appointment.patientGoogleEventId) {
+    await deletePatientCalendarEvent(appointment.patientId, appointment.patientGoogleEventId);
   }
 
   revalidatePath('/patient/appointments');

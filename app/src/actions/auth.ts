@@ -3,7 +3,6 @@
 import { cookies } from 'next/headers';
 import prisma from '@/lib/prisma';
 import { Role } from '@prisma/client';
-import { redirect } from 'next/navigation';
 import * as bcrypt from 'bcryptjs';
 
 export async function login(formData: FormData) {
@@ -34,12 +33,13 @@ export async function login(formData: FormData) {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
+    maxAge: 60 * 60 * 24 * 7, // 1 week
   });
 
-  if (user.role === Role.PATIENT) redirect('/patient');
-  if (user.role === Role.DOCTOR) redirect('/doctor');
-  if (user.role === Role.ADMIN) redirect('/admin');
-  redirect('/');
+  if (user.role === Role.PATIENT) return { success: true, redirectUrl: '/patient' };
+  if (user.role === Role.DOCTOR) return { success: true, redirectUrl: '/doctor' };
+  if (user.role === Role.ADMIN) return { success: true, redirectUrl: '/admin' };
+  return { success: true, redirectUrl: '/' };
 }
 
 export async function registerUser(formData: FormData) {
@@ -80,13 +80,14 @@ export async function registerUser(formData: FormData) {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
+    maxAge: 60 * 60 * 24 * 7, // 1 week
   });
 
-  redirect('/patient');
+  return { success: true, redirectUrl: '/patient' };
 }
 
 export async function logout() {
   const cookieStore = await cookies();
   cookieStore.delete('auth_session');
-  redirect('/');
+  return { success: true, redirectUrl: '/' };
 }

@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import { StethoscopeIcon, ArrowRightIcon, MailIcon, LockIcon } from '@/components/Icons';
 import { login } from '@/actions/auth';
 import styles from './page.module.css';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [role, setRole] = useState<'PATIENT' | 'DOCTOR' | 'ADMIN'>('PATIENT');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,6 +28,9 @@ export default function LoginPage() {
       if (result?.error) {
         setError(result.error);
         setIsLoading(false);
+      } else if (result?.success && result?.redirectUrl) {
+        // Redirect client-side to prevent Next.js from throwing an error in the try/catch
+        router.push(result.redirectUrl);
       }
     } catch (err) {
       console.error(err);

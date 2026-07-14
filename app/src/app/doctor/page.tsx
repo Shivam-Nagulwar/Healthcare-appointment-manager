@@ -208,6 +208,26 @@ export default async function DoctorDashboard() {
 
             {/* Right Column */}
             <div className={styles.rightCol}>
+              {/* Google Calendar Integration */}
+              <div className="card animate-fade-in-up" style={{ marginBottom: 'var(--space-6)', borderLeft: dbDoctor.googleRefreshToken ? '4px solid var(--success-500)' : '4px solid var(--warning-500)' }}>
+                <h3 className={styles.cardTitle} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                  <CalendarIcon size={18} /> Google Calendar
+                </h3>
+                {dbDoctor.googleRefreshToken ? (
+                  <div>
+                    <p style={{ color: 'var(--success-600)', fontSize: 'var(--text-sm)', fontWeight: 500, marginBottom: 'var(--space-2)' }}>✓ Connected</p>
+                    <p style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)' }}>Appointments are syncing to your Google Calendar.</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', marginBottom: 'var(--space-4)' }}>Connect your calendar to automatically sync appointments.</p>
+                    <a href="/api/auth/google/login" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
+                      Connect Calendar
+                    </a>
+                  </div>
+                )}
+              </div>
+
               {/* Upcoming */}
               <div className="card animate-fade-in-up">
                 <h3 className={styles.cardTitle}>Upcoming Appointments</h3>
