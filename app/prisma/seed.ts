@@ -1,7 +1,15 @@
 import { PrismaClient, Role, AppointmentStatus, UrgencyLevel, LLMStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
+import dotenv from 'dotenv';
 
-const prisma = new PrismaClient();
+dotenv.config();
+
+// Initialize adapter
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
